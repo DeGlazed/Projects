@@ -1,0 +1,103 @@
+Tanase Radu 331CC
+ ______________________________________________________ 
+|Simulare proces de calcul distribuit intr-o topologie.|
+|______________________________________________________|
+
+Pentru rulare se poate apela scriptul test.sh care va copia resursele
+necesare programului pentru a rula testele in folderul /sol si va apela
+programul, oferindu-i datele de intrare.
+(test.sh poate sa detecteze greseli datorita faptului
+ca mediul de simulare nu este unul optim).
+
+* Topologia este urmatoarea :
+- 3 procese coordonator (procesele cu id-urile 0, 1 si 2)
+  aceste procese sunt legate full mesh intre ele
+- pentru fiecare proces coordonator, un numar arbitrar de procese
+  worker
+
+* Cerinta : inmultirea cu 2 a unui vector generat de catre procesul 0,
+operatie executata de catre threadulrile worker pe un numar cat
+mai echilibrat de elemente ale vectorului.
+
+Pentru inceput, am declarat pentru toate procesele existente
+o matrice "topology", cu 3 linii si numar variabli de coloane.
+Aceasta structura va pastra topologia cunsocuta de catre fiecare
+proces. de asemenea va fi util o structura unde pastram cati
+workeri au fiecare coordonator.
+
+=====================================================================
+Task 1 : Aflarea topologiei
+=====================================================================
+------------------------Coordonatori---------------------------------
+Procesele coordonatoare vor citi ficare din fisierul alocat
+numarul workerilor si topologia corespunzatoare workerilor
+pe care ii coordoneaza. Fiecare coordonator va trimite catre
+workerii sai un mesaj care sa ii instiinteze care este id-ul
+coordonatorului.
+Astfel se creeaza o topologie locala a fiecarui coordonator
+pe care va trebui sa o trimita catre ceilalti coordonatori.
+Se trimite aceasta topologie, mai intai comunicand cate
+elemente se transmit, apoi comunicand elementele transmise.
+(pentru a face o distincite intre cele 2 mesaje, am folosit
+tagui diferite : 0 = numar de elemente, 1 = elementele; voi pastra
+aceasta conventie pe parcursul programului, trimitand o pereche de
+astfel de valori atunci cand transmit un vector).
+Odata trimisa topologia locala, procesul coordonator asteapta cate
+un mesaj de la ceilalti coordonatori, formandu-si astfel topologia
+finala, pe care o printeaza si apoi o trimite catre workerii proprii.
+---------------------------------------------------------------------
+
+--------------------------------Workeri------------------------------
+Workerii asteapta un mesaj pentru a fi informati de id-ul
+coordonatorului.
+Acestia asteapta apoi topologia finala, primind mai intai numarul de
+elemente (adica numarul de workeri ai procesului cu id-ul i), aloca
+memorie pentru linia corespunzatoare id-ului si apo primeste id-urile
+workerilor acelui coordonator.
+Dupa ce primeste topologia, o printeaza.
+--------------------------------------------------------------------- 
+
+=====================================================================
+Task 2 : inmultirea cu 2 a elementelor vectorului distribuit de
+catre coordonator 0
+=====================================================================
+--------------------------------Coordonatori-------------------------
+Coordonator 0 are urmatoarea munca in plus fata de ceilalti :
+- initiaza setul de date pe care trebuie sa il transmita spre
+procesare pornind de la N primit de la linia de comanda => v[N]
+unde v[i] = i; cu i = 0 : N-1
+- incearca sa distribuie cat mai egal workloadul catre workerii din
+clustere; Pentru a realiza acest lucru, imparte numarul N la numarul
+total de workeri pentru a gasi o valoare egala de munca pentru
+fiecare worker. Apoi calculeaza restul impartirii lui N la numarul
+total de workeri pentru a vedea cata munca ramane nedistribuita.
+Distribuie aceasta munca ramansa pe clustere, adaugand la munca
+clusterului atatea taskuri cati workeri sunt in cluster. Cand ramane
+cu un numar mai mic decat numarul de workeri, ii atribuie cat i-a
+ramas. => niste offseturi in vectorul de valori de la care fiecare
+coordonator va primi workload-ul pentru clusterul sau.
+- trimite valorile din vector catre clustere.
+
+Coordonatorii 1 si 2 primesc datele in "cluster_data", cu lungimea
+"data_len".
+
+Fiecare coordonator imparte munca catre fiecare worker in mod
+asemanator cu modul in care coordonatorul 0 a impartit datele
+pentru clustere, urmand apoi sa trimita aceste date catre workeri.
+
+Workloadul pentru fiecare worker reprezinta un freagment dintr-un
+offset folosit pentru determinarea locului din care se trimit valori
+din vectorul de date. La acelasi offset se primesc aceste date inapoi
+dupa inmultire (asa nu ne mai trebuie o structura suplimentara pentru
+mesajele de Recv si in acelasi se centralizeaza automat datele).
+
+Dupa ce primesc datele modificate, coordonatorii 1 si 2 trimit
+datele intregului cluster catre coordonatorul 0, care
+prin intermediul offseturilor centralizeaza datele inapoi in vectorul
+sursa si afiseaza rezultatul.
+---------------------------------------------------------------------
+
+--------------------------------Workeri------------------------------
+Primesc datele de la coordonator, le inmultesc cu 2 si le trimit
+inapoi catre coordonator.
+--------------------------------------------------------------------- 

@@ -1,0 +1,33 @@
+Timp de lucru la acest proiect : aproimativ 2 saptamani
+Pentru rulare este necesar instalarea bibliotecii ncurses.
+
+sudo apt-get install libncurses5-dev libncursesw5-dev
+
+Jocul battleships l-am implementat cu ajutorul functiilor urmatoare :
+
+"menu" : functie care imi afiseaza meniul principal (butoane si mesaj);
+navigarea prin acesta se face cu ajutorul sagetilor;
+selectia unui buton se va face cu tasta enter;
+butonul resume este inactiv (nu face nimic cand il selectezi) cand un joc nu a fost inceput
+si devine activ cand iesi dint-un joc inceput
+
+"newgame" si "loadgame" : in esenta aceeasi functie; cu ajutorul acestora afisez matricile pc-ului si jucatorului,
+scorurile si salvele de tunuri ramase pentru destroy in advance; de asemenea am ales ca "x" sa reprezinte locul unde ai lovit
+dar ai ratat o nava, iar "x" colorat cu rosu sa reprezinte locul unde ai lovit si ai nimerit o nava;
+cursorul cu care te misti pe matricea calculatorului este "+"(am vrut sa arate ca o tinta)
+
+newgame prezinta catva diferente fata de loadgame :
+cu ajutoul functiei playermat citesc din fisier matricea jucatorului si o salvez in interiorul programului
+iar cu ajutorul tripletului de functii "pcmat","ok" si "place" formez harta calculatorului :
+"pcmat" genereaza pozitia si orientarea random pt fiecare corabie,
+"ok" verifica daca amplasarea ei este posibila [in cazul in care aceasta iese de pe placa sau daca se afla in vecinatatea unei alte nave
+(am notat cu 2 vecinatatea navei - plasez vecinatatea cand plasez si corabia), "pcmat" genereaza un alt set de coordonate , iar in caz contar se apeleaza
+functia "place" care amplaseaza corabia pe harta (am abordat in jur de 12 cazuri particulare, de aceea programul are destul de multe linii de cod)]
+
+"destroy_in_advance" genereaza cate 10 coordonate random cu care loveste matricile jucatorului si calculatorului (daca a mai fost lovit, genereaza un alt se de coordonate)
+singura problema, functia da crash aplicatiei cand spamezi tasta "d", de aceea am limitat numarul de utilizari ale acestei functii, punand la dispozitie 2 salve de altilerie :)
+
+jocul se termina cand fie jucatorul(P1,player 1), fie calculatorul(PC) ajunge la scorul de 20; in acel moment apare un mesaj reprezentativ iar jocul se intoarce la meniul principal
+
+Bonus:
+am colorat locurile unde a lovit o barca cu rosu

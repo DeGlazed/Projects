@@ -1,0 +1,81 @@
+331CC Tanase Radu
+Procesare set de documente folosind paradigma Map-Reduce
+
+
+Pentru testare este de ajuns sa se ruleze scriptul test.sh
+Acesta va trece prin fisierele de input date spre testare si va realiza
+comparatia outputului programului cu un output asteptat, aflat in folderul
+tests/out.
+
+------------------------------Thread Coordonator----------------------------
+Am considerat ca threadul main este threadul coordonator al programului meu.
+Coordonatorul parseaza inputul primit de program pentru a genera taskuri
+pentru workeri.
+Acesta face submit la taskuri catre un ExecutorServie si asteapta terminarea
+threadurilor folosind .awaitTermination cu un timp de tiomeaut destul de mare
+pentru ca programul sa nu ruleze la infinit in caz de eroare.
+De asemenea, el face o mapare nume fisier <-> path fisier, iar taskuile
+primesc ca input path-ul fisierului.
+----------------------------------------------------------------------------
+
+-------------------------------Faza de Map----------------------------------
+In aceasta faza, fiecare proces de tipul Map va primi numele fisierului care
+trebuie sa il parcurga, offsetul de la care sa citeasca si dimensiunea pe care
+sa o citeasca din fisier.
+Dupa citirea bucatii sale, el trebuie sa numere aparitiile cuvintelor de
+lungimi egale si sa pastreze cuvintele cu lungime maxima.
+
+Inainte de a citi toata bucata sa, trebuie facut o procesare a inceputului
+si finalului de subsir citit. Problema apare atunci cand incep sau termin
+in mijlocul unui cuvant. Astfel, am satbilit doi indici : start_offset si
+end_offset care reprezinta marginile sirului de citit din fisier. Cu aceste
+margini ma pot misca la dreapta (cu ambele) pana cand dau peste un subsir
+de 2 caractere de forma [separator, litera] (pentru start) si
+[litera, separator] (pentru end). De asemenea am grija sa nu trec cu start
+peste limita fisierului. Astfel voi fi sigur ca in subsirul pe care il
+citesc, voi putea sa parcurg fiecare cuvand fara ca acesta sa fie "taiat".
+Threadurile care incep din mijlocul unui cuvant lasa acel cuvant sa fie
+acoperit de threadul anterior, iar cele care se termina la mijloc
+de cuvant vor prelua tot cuvantul de la threadul urmator.
+
+Vor exista threaduri care nu vor avea nimic de citit (exemplu: daca am un
+cuvant foarte lung si atat startul, cat si endul sunt la mijlocul cuvantului)
+Aceste cazuri se termina imediat de procesat.
+
+In cazul in care am de citit, threadul poate prelua din fisier bucata
+destinata lui, folosindu-se de offseturile calculate mai sus.
+Acesta foloseste StringTokenizer pentru a lua pe rand fiecare cuvant din subsirul
+propriu. ii calculeaza lungimea si il stocheaza intr-un "vector de frecventa"
+reprezentat de un HashMap.
+Cuvintele cu lungime maxima le pastreaza intr-un vector de Stringuri.
+La final, genereaza o structura MapDataSet care inglobeaza cele doua rezultate
+calculate, iar aceasta structura o adauga la un HashMap pus la dispozitie de
+threadul coordonator. (unde cheia este path-ul fisierului iar valoarea este
+un vector de rezultate partiale).
+--------------------------------------------------------------------------------
+
+-------------------------------Faza de Reduce----------------------------------
+In aceasta faza se combina rezultatele partiale de la faza de Map.
+Se foloseste un ExecutorService pentru a distribui taskuri de tipul Reduce
+care primesc ca input fisierul, si rezultatele partiale ale fisierului dat ca
+parametru.
+Pentru fiecare entry din setul de rezultate pertiale, le stochezi intr-un
+rezultat final, adaugand aparitiile cuvintelor si pastrand cuvintele cu lungime
+maxima globala.
+La pasul urmator se calculeaza rangul fisierului, folosind datele calculate la
+pasul anterior dupa folruma:
+
+rang = suma(nr_aparitii_cuvant
+            * valoarea_el_din_sirul_fibonacci(lungime_cuvant + 1)) /
+            numar_total_cuvinte
+
+Aceste rezultate le pastrez intr-o structura care le inglobeaza pe toate :
+FRMlwSet (FileRankMax_len_wordSet) care are o regula de comparare epntru a putea
+sorta elementele. Rezultatele sunt stocate intr-un vector cu elemente FRMlwSet
+pus la dispozitie de catre coordonator.
+--------------------------------------------------------------------------------
+
+Threadul coordonator sorteaza aceste rezultate, afisand intr-un fisier rezultatul
+pe care dorim sa il observam
+(in cazul nostru: nume fisier, rang, lungime maxima cuvant, numarul de cuvinte cu
+lungimea maxima)

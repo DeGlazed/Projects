@@ -1,0 +1,63 @@
+Tanase Radu 331CC
+Paralelizare algoritmi genetici.
+
+
+M-am folosit de codul prezent in skeletul solutiei seriale pentru a avea un cod de
+inceput pe care l-am paralelizat. Mare parte din functiile deja existente
+au ramas la fel, schimband insa codul pentru read_input pentru a accepta si numarul
+de threaduri la intrare. De asemenea am paralelizat compute fitness function pentru
+a putea calcula paralel fitnesul fiecarui individ, facand de asemenea o optimizare
+pentru functia de comparare (in loc sa stau in comparare sa numar cati cromozomi de 1
+au cei doi indivizi pe care ii compar, am facut asta odata cu calcuarea fitnesului,
+scutind astfel sa se mai faca alte operatii in plus).
+
+Operatiile de printare le-am pastrat pe threadul 0, facand printul doar daca threadul
+are ID-ul 0, facand celelalte threaduri sa astepte la bariera pentru terminarea printului.
+
+Sortarea de asemenea am pastrat-o pe un singur thread. Am incercat sa paralelizez aceasta
+operatie prin intermediul merge sortului paralel, numai ca solutia pe care am gasit-o 
+nu aducea un speedup programului. Ce m-am gandit sa fac a fost sa completez generatia 
+cu indivizi cu cromozomii pusi pe 0 pentru a ajunge cu countul la un numar putere a lui
+2 pentru a putea aplica merge sortul, urmad apoi sa elimin indivizii pusi in plus.
+Dar nu a mers :(
+
+Am observat ca toate modificarile aduse generatiei pot fi paralelizare pe acelasi 
+principiu de a calcula indicii de start si end in functie de id-ul threadurlui, 
+numarului de threaduri si numarului de elemente din generatie. In plus, nu trebuie 
+bariere intre fiecare stadiu de aplicare a functiilor care altereaza cromozomii, acestea
+fiind independente unele de altele.
+La crossover am intalnit insa cateva probleme. In cazul in care cei 30% de indivizi
+erau in numar impar, atunci pastram ultimul parinte neschimbat si faceam crossover
+intre cei 30%-1 (numar par). Numai ca, la impartirea pe threaduri am observat ca 
+intervalul alocat unui thread putea sa contina un numar impar de indivizi, ceea ce ducea
+la un overflow la final si apoi la un crossover gresit la urmatorul thread, acesta 
+incepand cu pozitia impara. Aceasta problema am intalnit-o initial la 4 threaduri, ceea
+ce m-a facut sa ma gandesc ca de la threadurile cu id par sa ia un element de la coada 
+si sa il pun la capul threadurilor cu id impar, numai ca aceasta s-a dovedit a fi mai mult
+o peticeala pentru cazul acesta (am gasit un contraexemplu pentru 3 threaduri, unde solutia
+nu mai mergea). 
+Apoi m-am gandit ca pentru fiecare thread sa incep cu ID-ul threadurlui,
+sa fac crossover intre cele id si urmatorul element, urmad apoi sa sar peste un numar de
+elemente egal cu 2*numarul de threaduri, facand asta atata timp cat pozitia mea este 
+mai mica decat cate elemente trebuia sa fac crossover. Matematic mi se pare corect dar 
+nu am inteles de ce nu imi mergea cand l-am implementat.
+Apoi am dat peste solutia finala, gandindu-ma care ar fi combinatiile problematice
+de indici de start si stop. Aici am vazut in primul rand ca end-ul unui thread inseamna
+startul altuia => un end impar nu strica programul, dar un start impar da. Astfel, daca 
+startul se afla pe pozitie impara, adun 1 la el si incep de pe pozitie para. Acest lucru
+nu afecteaza corectitudinea crossoverului pentru ca elementul peste care am sarit este
+tratat de threadul din urma cu endul impar.
+
+Am asteptat threadurile sa termine munca inainte sa trec la switchul de generatii.
+La final am lasat switchul de generatii pentru threadul 0, indexul generatiei se updateaza
+in acelasi fel ca celelalte paralelizari, prin start si end, urmand apoi printarea.
+
+Inainte sa printez solutia, am mai facut inca o data un compute_fitness pentru a updata
+si numarul de cormozomi si de a calcula ultima oara functia de fitness, urmand apoi
+sa sortez pe threadul 0, sa printez rezultatul si sa eliberez memoria(tot in maniera 
+paralela).
+
+Surse de inspiratie:
+Laborator
+Curs
+discutii cu colegii
